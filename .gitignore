@@ -165,3 +165,7 @@ cython_debug/
 last/
 xtb/
 config.json
+
+# pixi environments
+.pixi
+*.egg-info
