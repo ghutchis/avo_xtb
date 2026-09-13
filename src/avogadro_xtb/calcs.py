@@ -5,6 +5,8 @@ import logging
 
 import easyxtb
 
+from .progress import reporter_for, streaming_kwargs
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ def sp(avo_input: dict) -> dict:
         geom,
         options=easyxtb.config["xtb_opts"],
     )
-    calc.run()
+    reporter = reporter_for("Calculating energy…")
+    calc.run(**streaming_kwargs(calc.run, reporter))
 
     # If an energy couldn't be parsed, will return None, so have to allow for that
     # Seems like a reasonable placeholder that should be obviously incorrect to anyone
@@ -93,7 +96,8 @@ def opt(avo_input: dict, ohess: bool) -> dict:
             geom,
             options=easyxtb.config["xtb_opts"],
         )
-    calc.run()
+    reporter = reporter_for("Optimizing geometry…")
+    calc.run(**streaming_kwargs(calc.run, reporter))
 
     # Convert geometry to cjson
     geom_cjson = calc.output_geometry.to_cjson()
@@ -128,9 +132,11 @@ def freq(avo_input: dict) -> dict:
 
     # Run calculation; returns set of frequency data
     logger.debug("The plugin is requesting a frequency calculation")
+    reporter = reporter_for("Calculating vibrational frequencies…")
     freqs = easyxtb.calculate.frequencies(
         geom,
         options=easyxtb.config["xtb_opts"],
+        **streaming_kwargs(easyxtb.calculate.frequencies, reporter),
     )
 
     # Format the frequencies in the appropriate way for CJSON
@@ -160,9 +166,11 @@ def orbitals(avo_input: dict) -> dict:
 
     # Run calculation; returns Molden output file as string
     logger.debug("The plugin is requesting a molecular orbitals calculation")
+    reporter = reporter_for("Calculating molecular orbitals…")
     molden_string = easyxtb.calculate.orbitals(
         geom,
         options=easyxtb.config["xtb_opts"],
+        **streaming_kwargs(easyxtb.calculate.orbitals, reporter),
     )
 
     # Format everything appropriately for Avogadro

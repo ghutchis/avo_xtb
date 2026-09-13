@@ -30,6 +30,13 @@ This plugin currently provides functionality to run the following calculation ty
 * protonation and deprotonation screening
 * explicit solvent shell generation
 
+### Progress reporting
+Avogadro 2.1 and later show the progress of a running calculation. Geometry optimizations (including Smart Opt) report each cycle as it completes, along with the current energy and gradient norm, and Smart Opt also reports the frequency and thermochemistry stages that follow the optimization.
+
+No progress bar is drawn. xtb only advertises the worst-case cap on its optimizer (`max. optcycles`, 200 by default) rather than an expected number of cycles, so a bar scaled to it would be misleading; the cycle count and convergence data are reported as text instead.
+
+This requires a version of easyxtb that can stream the output of xtb while it is still running. On older versions, and on Avogadro 2.0, calculations run exactly as before without progress reports.
+
 ### Run options
 The following options for xtb and/or CREST can currently be configured in the plugin:
 * number of parallel threads to use for calculations
