@@ -29,9 +29,9 @@ def run(
         case "sp":
             output = calcs.sp(avo_input)
         case "opt":
-            output = calcs.opt(avo_input, ohess=False)
+            output = calcs.opt(avo_input)
         case "smartopt":
-            output = calcs.opt(avo_input, ohess=True)
+            output = calcs.smartopt(avo_input)
         case "freq":
             output = calcs.freq(avo_input)
         case "orbitals":

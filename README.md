@@ -22,7 +22,7 @@ This plugin currently provides functionality to run the following calculation ty
 * single point energies
 * geometry optimizations
 * vibrational frequencies
-* combined opt + freq with automatic restart for negative frequencies
+* combined opt + freq with automatic restart for negative frequencies ("Smart Opt")
 * molecular orbitals
 
 ### CREST
@@ -30,8 +30,15 @@ This plugin currently provides functionality to run the following calculation ty
 * protonation and deprotonation screening
 * explicit solvent shell generation
 
+### Smart Opt
+"Smart Opt" runs an optimization followed by a frequency calculation. If xtb finds an imaginary frequency, the result is a transition state rather than a minimum, and xtb writes out a geometry distorted away from it and recommends restarting from that. Smart Opt does those restarts automatically, up to a limit, until the frequencies show a genuine minimum, and reports each restart as it happens.
+
+The frequencies of the final geometry are returned along with it, so there is no need to run the Frequencies command afterwards. If a minimum still has not been reached when the restart limit is hit, the result is returned with a warning rather than silently.
+
+Restarting requires easyxtb 0.11 or later. Against an earlier version the restarting is still done, but the vibrational frequencies are not returned.
+
 ### Progress reporting
-Avogadro 2.1 and later show the progress of a running calculation. Geometry optimizations (including Smart Opt) report each cycle as it completes, along with the current energy and gradient norm, and Smart Opt also reports the frequency and thermochemistry stages that follow the optimization.
+Avogadro 2.1 and later show the progress of a running calculation. Geometry optimizations (including Smart Opt) report each cycle as it completes, along with the current energy and gradient norm, and Smart Opt also reports the frequency and thermochemistry stages that follow the optimization, plus any restart.
 
 No progress bar is drawn. xtb only advertises the worst-case cap on its optimizer (`max. optcycles`, 200 by default) rather than an expected number of cycles, so a bar scaled to it would be misleading; the cycle count and convergence data are reported as text instead.
 

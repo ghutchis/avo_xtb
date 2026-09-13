@@ -190,13 +190,9 @@ def test_singular_cycle_count(progress_enabled, capsys):
     assert reported == ["Geometry converged after 1 cycle"]
 
 
-def test_restarted_optimization_reports_cycles_again(progress_enabled, capsys):
-    """`xtb` distorts the geometry and optimizes again when it finds an
-    imaginary frequency, so the reporter has to leave the frequency stage and go
-    back to counting cycles."""
-    restarted = (
-        OHESS_OUTPUT
-        + """\
+# What a Smart Opt restart looks like: xtb returns to the optimizer with a
+# geometry distorted away from the stationary point it just found.
+RESTART_OUTPUT = """\
       -----------------------------------------------------------
      |                        A N C O P T                        |
       -----------------------------------------------------------
@@ -204,9 +200,31 @@ def test_restarted_optimization_reports_cycles_again(progress_enabled, capsys):
  * total energy  :   -13.5000000 Eh     change       -0.1000000E+00 Eh
    gradient norm :     0.0100000 Eh/α   predicted    -0.1000000E+00 ( -10.00%)
 """
+
+
+def test_restarted_optimization_reports_cycles_again(progress_enabled, capsys):
+    """The reporter has to leave the frequency stage and go back to counting
+    cycles when the optimizer starts over."""
+    reported = messages(OHESS_OUTPUT + RESTART_OUTPUT, capsys)
+    assert reported[-1] == (
+        "Optimizing geometry (restart 1) — cycle 1, E = -13.500000 Eh, |g| = 0.010000"
     )
-    reported = messages(restarted, capsys)
-    assert reported[-1] == "Optimizing geometry — cycle 1, E = -13.500000 Eh, |g| = 0.010000"
+
+
+def test_restarts_are_counted(progress_enabled, capsys):
+    """A user watching a Smart Opt should be able to tell a restart from the
+    first attempt, since a restart means the first result was not a minimum."""
+    reported = messages(OHESS_OUTPUT + RESTART_OUTPUT * 2, capsys)
+    assert "Optimizing geometry (restart 1)…" in reported
+    assert "Optimizing geometry (restart 2)…" in reported
+    assert "Optimizing geometry (restart 3)…" not in reported
+
+
+def test_the_first_optimization_is_not_called_a_restart(progress_enabled, capsys):
+    """The optimizer's banner spans two lines carrying the same title, so a
+    naive count of it would report a restart that never happened."""
+    reported = messages(OHESS_OUTPUT, capsys)
+    assert not any("restart" in message for message in reported)
 
 
 def test_unrecognized_output_is_ignored(progress_enabled, capsys):

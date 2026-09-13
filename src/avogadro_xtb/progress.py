@@ -28,11 +28,15 @@ logger = logging.getLogger(__name__)
 
 
 # Section banners, printed centred between vertical bars, mark xtb's transition
-# from one stage of a calculation to the next. Keys are the banner titles with
-# runs of whitespace collapsed to a single space; the spaced-out letters of
-# xtb's display font are part of the title itself.
+# from one stage of a calculation to the next. Titles are matched with runs of
+# whitespace collapsed to a single space; the spaced-out letters of xtb's
+# display font are part of the title itself.
+
+# The optimizer's banner is handled on its own, as returning to it partway
+# through a run is how a restart announces itself.
+OPTIMIZER_BANNER = "A N C O P T"
+
 SECTION_MESSAGES = {
-    "A N C O P T": "Optimizing geometry…",
     "Numerical Hessian": "Calculating vibrational frequencies…",
     "Final Singlepoint": "Final single point calculation…",
     "Frequency Printout": "Analysing vibrational frequencies…",
@@ -92,6 +96,10 @@ class XtbProgressReporter:
         # reporting of a geometry optimization does not overwrite the message
         # for a later stage such as the numerical Hessian.
         self.optimization_done = False
+        # Counts the times xtb has started the optimizer again from a geometry
+        # distorted away from a stationary point, which is how a Smart Opt
+        # works its way off a transition state.
+        self.restart = 0
         self._last_message = None
 
         if initial_message:
@@ -104,9 +112,15 @@ class XtbProgressReporter:
         self._last_message = message
         report_progress(message=message)
 
+    def optimization_label(self) -> str:
+        """Name the optimization currently running, counting any restarts."""
+        if self.restart:
+            return f"Optimizing geometry (restart {self.restart})"
+        return "Optimizing geometry"
+
     def optimization_message(self) -> str:
         """Describe the state of the geometry optimization in one line."""
-        message = f"Optimizing geometry — cycle {self.cycle}"
+        message = f"{self.optimization_label()} — cycle {self.cycle}"
         # The energy and gradient norm of a cycle are only printed once its
         # single point is finished, so they are absent while the first cycle is
         # still being computed.
@@ -161,17 +175,23 @@ class XtbProgressReporter:
         banner_match = BANNER_RE.match(line)
         if banner_match:
             title = " ".join(banner_match.group(1).split())
+            if title == OPTIMIZER_BANNER:
+                # The optimizer's banner spans two lines that both carry its
+                # title, so arriving here does not on its own mean a new
+                # optimization. One that has already run cycles does: xtb only
+                # reaches the optimizer again after distorting the geometry away
+                # from a stationary point, which is a Smart Opt restarting.
+                if self.cycle is not None:
+                    self.restart += 1
+                self.optimization_done = False
+                self.cycle = None
+                self.energy = None
+                self.gradient = None
+                self.report(f"{self.optimization_label()}…")
+                return
+
             message = SECTION_MESSAGES.get(title)
             if message is not None:
-                # A banner is drawn over several lines, and the optimizer's
-                # spans two, so the same title can arrive more than once;
-                # report() drops the repeat.
-                if title == "A N C O P T":
-                    # xtb restarts the optimizer from a distorted geometry when
-                    # it finds an imaginary frequency, so reaching this banner
-                    # again means a fresh optimization is starting.
-                    self.optimization_done = False
-                    self.cycle = None
                 self.report(message)
 
 
